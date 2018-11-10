@@ -193,15 +193,15 @@ int main(int argc, char** argv){
 
     long i;
     for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
-      pthread_t tid;
-      pthread_create(&tid, 0, (void*) router_solve, (void *)&routerArg);
-      vector_pushBack(threads, &tid);
+      pthread_t thread;
+      pthread_create(&thread, 0, (void*) router_solve, (void *)&routerArg);
+      vector_pushBack(threads, (void*) &thread);
     }
     //router_solve((void *)&routerArg);
 
     //THREAD NOT PAUSING WTF???
     for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
-      pthread_join((pthread_t) vector_at(threads, i), NULL);
+      pthread_join(*((pthread_t*)vector_at(threads, i)), NULL);
     }
     vector_free(threads);
     pthread_mutex_destroy(&lock);
