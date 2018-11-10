@@ -295,14 +295,13 @@ static vector_t* doTraceback (grid_t* gridPtr, grid_t* myGridPtr, coordinate_t* 
  */
 void router_solve (void* argPtr){
 
-    pthread_mutex_t lock;
-    pthread_mutex_init(&lock, NULL);
-
     router_solve_arg_t* routerArgPtr = (router_solve_arg_t*)argPtr;
     router_t* routerPtr = routerArgPtr->routerPtr;
     maze_t* mazePtr = routerArgPtr->mazePtr;
     vector_t* myPathVectorPtr = vector_alloc(1);
     assert(myPathVectorPtr);
+
+    pthread_mutex_t* lockPtr = routerArgPtr->lockPtr;
 
     queue_t* workQueuePtr = mazePtr->workQueuePtr;
     grid_t* gridPtr = mazePtr->gridPtr;
@@ -318,13 +317,13 @@ void router_solve (void* argPtr){
     while (1) {
 
         pair_t* coordinatePairPtr;
-        pthread_mutex_lock(&lock);
+        pthread_mutex_lock(lockPtr);
         if (queue_isEmpty(workQueuePtr)) {
             coordinatePairPtr = NULL;
         } else {
             coordinatePairPtr = (pair_t*)queue_pop(workQueuePtr);
         }
-        pthread_mutex_unlock(&lock);
+        pthread_mutex_unlock(lockPtr);
         if (coordinatePairPtr == NULL) {
             break;
         }
@@ -345,22 +344,24 @@ void router_solve (void* argPtr){
                            srcPtr, dstPtr)) {
               pointVectorPtr = doTraceback(gridPtr, myGridPtr, dstPtr, bendCost);
               if (pointVectorPtr) {
-                  pthread_mutex_lock(&lock);
+                  pthread_mutex_lock(lockPtr);
                   //verificar se o caminho esta livre
                   long i;
                   for (i = 1; i < vector_getSize(pointVectorPtr) - 1; i++) {
-                    if (*(long*)vector_at(pointVectorPtr, i) != -1) {
-                      pthread_mutex_unlock(&lock);
+                    if (*(long*)vector_at(pointVectorPtr, i) != -1) {  
                       breakSignal = TRUE;
                       break;
                     }
                   }
-                  if (breakSignal) break;
+                  if (breakSignal) {
+                    pthread_mutex_unlock(lockPtr);
+                    continue;
+                  }
                   grid_addPath_Ptr(gridPtr, pointVectorPtr);
-                  pthread_mutex_unlock(&lock);
+                  pthread_mutex_unlock(lockPtr);
                   success = TRUE;
               }
-          }
+          } else { break; }
 
           if (success) {
               bool_t status = vector_pushBack(myPathVectorPtr,(void*)pointVectorPtr);
@@ -374,9 +375,9 @@ void router_solve (void* argPtr){
      * Add my paths to global list
      */
     list_t* pathVectorListPtr = routerArgPtr->pathVectorListPtr;
-    pthread_mutex_lock(&lock);
+    pthread_mutex_lock(lockPtr);
     list_insert(pathVectorListPtr, (void*)myPathVectorPtr);
-    pthread_mutex_unlock(&lock);
+    pthread_mutex_unlock(lockPtr);
 
     grid_free(myGridPtr);
     queue_free(myExpansionQueuePtr);

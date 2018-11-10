@@ -77,7 +77,7 @@ enum param_defaults {
     PARAM_DEFAULT_XCOST      = 1,
     PARAM_DEFAULT_YCOST      = 1,
     PARAM_DEFAULT_ZCOST      = 2,
-    PARAM_DEFAULT_NUMTAREFAS = 0,
+    PARAM_DEFAULT_NUMTAREFAS = 1,
 };
 
 bool_t global_doPrint = TRUE;
@@ -169,7 +169,7 @@ int main(int argc, char** argv){
      * Initialization
      */
 
-    vector_t* threads = vector_alloc(PARAM_NUMTAREFAS);
+    vector_t* threads = vector_alloc(global_params[PARAM_NUMTAREFAS]);
 
     char* filename = parseArgs(argc, (char** const)argv);
     maze_t* mazePtr = maze_alloc();
@@ -184,7 +184,10 @@ int main(int argc, char** argv){
     list_t* pathVectorListPtr = list_alloc(NULL);
     assert(pathVectorListPtr);
 
-    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr};
+    pthread_mutex_t lock;
+    pthread_mutex_init(&lock, NULL);
+
+    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, &lock};
     TIMER_T startTime;
     TIMER_READ(startTime);
 
@@ -194,10 +197,14 @@ int main(int argc, char** argv){
       pthread_create(&tid, 0, (void*) router_solve, (void *)&routerArg);
       vector_pushBack(threads, &tid);
     }
+    //router_solve((void *)&routerArg);
 
+    //THREAD NOT PAUSING WTF???
     for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
       pthread_join((pthread_t) vector_at(threads, i), NULL);
     }
+    vector_free(threads);
+    pthread_mutex_destroy(&lock);
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);
