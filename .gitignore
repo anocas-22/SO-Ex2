@@ -1,3 +1,4 @@
 Backup_08_11_2018.zip
 *.o
 /CircuitRouter-ParSolver/inputs/*.res*
+sol.zip
