@@ -1,6 +1,7 @@
-Estrutura das diretorias:
+#ESTRUTURA DAS DIRETORIAS#
 SOLUCAO
 | doTest.sh //script que obtem o tempo de execucao do programa
+| Makefile //Makefile geral (inclui o CircuitRouter-ParSolver e o CircuitRouter-SeqSolver)
 | README.txt
 |
 |---CircuitRouter-ParSolver //codigo do programa
@@ -9,7 +10,7 @@ SOLUCAO
 |   | coordinate.h
 |   | grid.c
 |   | grid.h
-|	  | Makefile
+|	  | Makefile //Makefile do CircuitRouter-ParSolver
 |   | router.c
 |   | router.h
 |---CircuitRouter-SeqSolver //codigo do Ex1 (usado para calcular o speed up)
@@ -18,7 +19,7 @@ SOLUCAO
 |   | coordinate.h
 |   | grid.c
 |   | grid.h
-|	  | Makefile
+|	  | Makefile //Makefile do CircuitRouter-SeqSolver
 |   | router.c
 |   | router.h
 |---lib //biblioteca auxiliar ao programa
@@ -48,12 +49,19 @@ SOLUCAO
     | random-x256-y256-z3-n256.txt.speedups.csv
     | random-x256-y256-z5-n256.txt.speedups.csv
 
-Para compilar o codigo usar:
+#COMPILACAO E EXECUCAO#
+Para compilar o codigo todo usar:
 make
+Para compilar apenas o CircuitRouter-ParSolver ou o CircuitRouter-SeqSolver usar respetivamente:
+make -C CircuitRouter-ParSolver
+make -C CircuitRouter-SeqSolver
+
 Para eliminar os ficheiros criados pela compilacao usar:
 make clean
+
 Para executar o programa usar:
 ./CircuitRouter-ParSolver/CircuitRouter-ParSolver -t <numero de threads a usar> <ficheiro de entrada>
+
 Para executar o programa e medir o speedup usar:
 ./doTest.sh <numero de threads a usar> <ficheiro de entrada>
 
