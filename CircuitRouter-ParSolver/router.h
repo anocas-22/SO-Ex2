@@ -70,7 +70,7 @@ typedef struct router_solve_arg {
     router_t* routerPtr;
     maze_t* mazePtr;
     list_t* pathVectorListPtr;
-    pthread_mutex_t* lockPtr;
+    pthread_rwlock_t* lockPtr;
 } router_solve_arg_t;
 
 

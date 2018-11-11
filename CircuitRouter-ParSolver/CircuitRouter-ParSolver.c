@@ -184,8 +184,8 @@ int main(int argc, char** argv){
     list_t* pathVectorListPtr = list_alloc(NULL);
     assert(pathVectorListPtr);
 
-    pthread_mutex_t lock;
-    pthread_mutex_init(&lock, NULL);
+    pthread_rwlock_t lock;
+    pthread_rwlock_init(&lock, NULL);
 
     router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, &lock};
     TIMER_T startTime;
@@ -204,7 +204,7 @@ int main(int argc, char** argv){
       pthread_join(*((pthread_t*)vector_at(threads, i)), NULL);
     }
     vector_free(threads);
-    pthread_mutex_destroy(&lock);
+    pthread_rwlock_destroy(&lock);
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);
