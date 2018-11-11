@@ -59,6 +59,7 @@
 #include "grid.h"
 #include "lib/types.h"
 #include "lib/vector.h"
+#include <pthread.h>
 
 
 const unsigned long CACHE_LINE_SIZE = 32UL;
@@ -214,14 +215,34 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr){
  * grid_addPath_Ptr
  * =============================================================================
  */
-void grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr){
+bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lockVector){
     long i;
     long n = vector_getSize(pointVectorPtr);
+    bool_t returnVal = TRUE;
+
+    //fazer lock das posicoes todas
+    for (i = 1; i < (n-1); i++) {
+      long x, y, z;
+      long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
+      grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
+      pthread_rwlock_wrlock((pthread_rwlock_t*) vector_at(lockVector, ((z * gridPtr->height + y) * gridPtr->width + x)));
+      //verificar se o caminho esta livre e unlocked (se nao devolver false)
+      if (*gridPointPtr == GRID_POINT_FULL)
+        returnVal = FALSE;
+    }
 
     for (i = 1; i < (n-1); i++) {
-        long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
+      long x, y, z;
+      long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
+      grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
+      if (returnVal) {
         *gridPointPtr = GRID_POINT_FULL;
+      }
+      //fazer unclok das posicoes
+      pthread_rwlock_unlock((pthread_rwlock_t*) vector_at(lockVector, ((z * gridPtr->height + y) * gridPtr->width + x)));
     }
+
+    return returnVal;
 }
 
 

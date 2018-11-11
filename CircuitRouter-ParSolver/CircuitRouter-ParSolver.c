@@ -187,24 +187,36 @@ int main(int argc, char** argv){
     pthread_rwlock_t lock;
     pthread_rwlock_init(&lock, NULL);
 
-    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, &lock};
+    //criar vetor de mutex igual a grid
+    long gridSize = mazePtr->gridPtr->width * mazePtr->gridPtr->height * mazePtr->gridPtr->depth;
+    vector_t* lockVector = vector_alloc(gridSize);
+    for (long i = 0; i < gridSize; i++) {
+      pthread_rwlock_t* pointLock = (pthread_rwlock_t*) malloc(sizeof(pthread_rwlock_t));
+      pthread_rwlock_init(pointLock, NULL);
+      vector_pushBack(lockVector, (void*) pointLock);
+    }
+
+    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, &lock, lockVector};
     TIMER_T startTime;
     TIMER_READ(startTime);
 
     long i;
     for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
-      pthread_t thread;
-      pthread_create(&thread, 0, (void*) router_solve, (void *)&routerArg);
-      vector_pushBack(threads, (void*) &thread);
+      pthread_t* thread = (pthread_t*) malloc(sizeof(pthread_t));
+      pthread_create(thread, 0, (void*) router_solve, (void *)&routerArg);
+      vector_pushBack(threads, (void*) thread);
     }
     //router_solve((void *)&routerArg);
 
-    //THREAD NOT PAUSING WTF???
     for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
       pthread_join(*((pthread_t*)vector_at(threads, i)), NULL);
     }
     vector_free(threads);
     pthread_rwlock_destroy(&lock);
+    for (long i = 0; i < gridSize; i++) {
+      pthread_rwlock_destroy((pthread_rwlock_t*)vector_at(lockVector, i));
+      free((pthread_rwlock_t*)vector_at(lockVector, i));
+    }
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);

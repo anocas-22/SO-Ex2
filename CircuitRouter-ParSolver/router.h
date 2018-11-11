@@ -71,6 +71,7 @@ typedef struct router_solve_arg {
     maze_t* mazePtr;
     list_t* pathVectorListPtr;
     pthread_rwlock_t* lockPtr;
+    vector_t* lockVector;
 } router_solve_arg_t;
 
 

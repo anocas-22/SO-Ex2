@@ -302,6 +302,7 @@ void router_solve (void* argPtr){
     assert(myPathVectorPtr);
 
     pthread_rwlock_t* lockPtr = routerArgPtr->lockPtr;
+    vector_t* lockVector = routerArgPtr->lockVector;
 
     queue_t* workQueuePtr = mazePtr->workQueuePtr;
     grid_t* gridPtr = mazePtr->gridPtr;
@@ -338,7 +339,6 @@ void router_solve (void* argPtr){
           bool_t breakSignal = FALSE;
           vector_t* pointVectorPtr = NULL;
 
-          //pensar
           pthread_rwlock_rdlock(lockPtr);
           grid_copy(myGridPtr, gridPtr); /* create a copy of the grid, over which the expansion and trace back phases will be executed. */
           pthread_rwlock_unlock(lockPtr);
@@ -346,20 +346,17 @@ void router_solve (void* argPtr){
                            srcPtr, dstPtr)) {
               pointVectorPtr = doTraceback(gridPtr, myGridPtr, dstPtr, bendCost);
               if (pointVectorPtr) {
-                  long i;
-                  pthread_rwlock_wrlock(lockPtr);
-                  for (i = 1; i < vector_getSize(pointVectorPtr) - 1; i++) {
-                    if (*(long*)vector_at(pointVectorPtr, i) != -1) {
+                  //verifica se as posicoes estao todas
+                  for (long i = 1; i < (vector_getSize(pointVectorPtr)-1); i++) {
+                    if (*(long*)vector_at(pointVectorPtr, i) == GRID_POINT_FULL) {
                       breakSignal = TRUE;
                       break;
                     }
                   }
-                  if (breakSignal) {
-                    pthread_rwlock_unlock(lockPtr);
+                  if (breakSignal) { continue; }
+                  if (!grid_addPath_Ptr(gridPtr, pointVectorPtr, lockVector)) {
                     continue;
                   }
-                  grid_addPath_Ptr(gridPtr, pointVectorPtr);
-                  pthread_rwlock_unlock(lockPtr);
                   success = TRUE;
               }
           } else { break; }
