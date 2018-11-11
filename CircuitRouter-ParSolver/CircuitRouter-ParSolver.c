@@ -210,6 +210,7 @@ int main(int argc, char** argv){
 
     for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
       pthread_join(*((pthread_t*)vector_at(threads, i)), NULL);
+      free((pthread_t*)vector_at(threads, i));
     }
     vector_free(threads);
     pthread_rwlock_destroy(&lock);
@@ -217,6 +218,7 @@ int main(int argc, char** argv){
       pthread_rwlock_destroy((pthread_rwlock_t*)vector_at(lockVector, i));
       free((pthread_rwlock_t*)vector_at(lockVector, i));
     }
+    vector_free(lockVector);
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);
