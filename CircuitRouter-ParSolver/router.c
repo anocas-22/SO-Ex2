@@ -54,12 +54,14 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <errno.h>
 #include "coordinate.h"
 #include "grid.h"
 #include "lib/queue.h"
 #include "router.h"
 #include "lib/vector.h"
 
+extern int errno;
 
 typedef enum momentum {
     MOMENTUM_ZERO = 0,
@@ -320,8 +322,8 @@ void router_solve (void* argPtr){
         pair_t* coordinatePairPtr;
 
         /*O lock global controla a competicao para extrair tarefas de workQueuePtr*/
-        if (pthread_mutex_lock(lockPtr) != 0) {
-          fprintf(stderr, "Failed to lock mutex.\n");
+        if ((errno = pthread_mutex_lock(lockPtr)) != 0) {
+          perror("Failed to lock mutex");
           exit(EXIT_FAILURE);
         }
         if (queue_isEmpty(workQueuePtr)) {
@@ -329,8 +331,8 @@ void router_solve (void* argPtr){
         } else {
             coordinatePairPtr = (pair_t*)queue_pop(workQueuePtr);
         }
-        if (pthread_mutex_unlock(lockPtr) != 0) {
-          fprintf(stderr, "Failed to unlock mutex.\n");
+        if ((errno = pthread_mutex_unlock(lockPtr)) != 0) {
+          perror("Failed to unlock mutex");
           exit(EXIT_FAILURE);
         }
         if (coordinatePairPtr == NULL) {
@@ -397,13 +399,13 @@ void router_solve (void* argPtr){
      * O lock controla a competicao entre threads
      */
     list_t* pathVectorListPtr = routerArgPtr->pathVectorListPtr;
-    if (pthread_mutex_lock(lockPtr) != 0) {
-      fprintf(stderr, "Failed to lock mutex.\n");
+    if ((errno = pthread_mutex_lock(lockPtr)) != 0) {
+      perror("Failed to lock mutex");
       exit(EXIT_FAILURE);
     }
     list_insert(pathVectorListPtr, (void*)myPathVectorPtr);
-    if (pthread_mutex_unlock(lockPtr) != 0) {
-      fprintf(stderr, "Failed to unlock mutex.\n");
+    if ((errno = pthread_mutex_unlock(lockPtr)) != 0) {
+      perror("Failed to unlock mutex");
       exit(EXIT_FAILURE);
     }
 
