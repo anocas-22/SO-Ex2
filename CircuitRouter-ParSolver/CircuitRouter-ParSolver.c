@@ -185,8 +185,8 @@ int main(int argc, char** argv){
 
     //Inicializa o lock global para a interacao com workQueuePtr e pathVectorListPtr
     pthread_mutex_t lock;
-    if (pthread_mutex_init(&lock, NULL) != 0) {
-      perror("Failure initializing mutex: ");
+    if ((errno = pthread_mutex_init(&lock, NULL)) != 0) {
+      perror("Failure initializing mutex");
       exit(EXIT_FAILURE);
     }
 
@@ -202,11 +202,11 @@ int main(int argc, char** argv){
     for (long i = 0; i < gridSize; i++) {
       pthread_mutex_t* pointLock = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
       if (pointLock == NULL) {
-        perror("Failed malloc: ");
+        perror("Failed malloc");
         exit(EXIT_FAILURE);
       }
-      if (pthread_mutex_init(pointLock, NULL) != 0) {
-        perror("Failed malloc: ");
+      if ((errno = pthread_mutex_init(pointLock, NULL)) != 0) {
+        perror("Failed malloc");
         exit(EXIT_FAILURE);
       }
       if(!vector_pushBack(lockVector, (void*) pointLock)) {
@@ -231,11 +231,11 @@ int main(int argc, char** argv){
     for (long i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
       pthread_t* thread = (pthread_t*) malloc(sizeof(pthread_t));
       if (thread == NULL) {
-        perror("Failed malloc: ");
+        perror("Failed malloc");
         exit(EXIT_FAILURE);
       }
-      if (pthread_create(thread, 0, (void*) router_solve, (void *)&routerArg) != 0) {
-        fprintf(stderr, "Failed to create thread.\n");
+      if ((errno = pthread_create(thread, 0, (void*) router_solve, (void *)&routerArg)) != 0) {
+        perror("Failed to create thread");
         exit(EXIT_FAILURE);
       }
       if (!vector_pushBack(threads, (void*) thread)) {
@@ -246,8 +246,8 @@ int main(int argc, char** argv){
 
     //Espera que todas as threads acabem a execucao e liberta-as
     for (long i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
-      if (pthread_join(*((pthread_t*)vector_at(threads, i)), NULL) != 0) {
-        fprintf(stderr, "Failed to join thread.\n");
+      if ((errno = pthread_join(*((pthread_t*)vector_at(threads, i)), NULL) != 0)) {
+        perror("Failed to join thread");
         exit(EXIT_FAILURE);
       }
       free((pthread_t*)vector_at(threads, i));
@@ -256,14 +256,14 @@ int main(int argc, char** argv){
     //Liberta o vetor e destroi todos os mutexes e o vetor correspondente
     vector_free(threads);
 
-    if (pthread_mutex_destroy(&lock) != 0) {
-      fprintf(stderr, "Failed to destroy mutex.\n");
+    if ((errno = pthread_mutex_destroy(&lock)) != 0) {
+      perror("Failed to destroy mutex");
       exit(EXIT_FAILURE);
     }
 
     for (long i = 0; i < gridSize; i++) {
-      if (pthread_mutex_destroy((pthread_mutex_t*)vector_at(lockVector, i)) != 0) {
-        fprintf(stderr, "Failed to destroy mutex.\n");
+      if ((errno = pthread_mutex_destroy((pthread_mutex_t*)vector_at(lockVector, i))) != 0) {
+        perror("Failed to destroy mutex");
         exit(EXIT_FAILURE);
       }
       free((pthread_mutex_t*)vector_at(lockVector, i));
