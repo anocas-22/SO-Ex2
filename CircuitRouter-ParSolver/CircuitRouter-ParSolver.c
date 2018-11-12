@@ -184,15 +184,15 @@ int main(int argc, char** argv){
     list_t* pathVectorListPtr = list_alloc(NULL);
     assert(pathVectorListPtr);
 
-    pthread_rwlock_t lock;
-    pthread_rwlock_init(&lock, NULL);
+    pthread_mutex_t lock;
+    pthread_mutex_init(&lock, NULL);
 
     //criar vetor de mutex igual a grid
     long gridSize = mazePtr->gridPtr->width * mazePtr->gridPtr->height * mazePtr->gridPtr->depth;
     vector_t* lockVector = vector_alloc(gridSize);
     for (long i = 0; i < gridSize; i++) {
-      pthread_rwlock_t* pointLock = (pthread_rwlock_t*) malloc(sizeof(pthread_rwlock_t));
-      pthread_rwlock_init(pointLock, NULL);
+      pthread_mutex_t* pointLock = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+      pthread_mutex_init(pointLock, NULL);
       vector_pushBack(lockVector, (void*) pointLock);
     }
 
@@ -213,10 +213,10 @@ int main(int argc, char** argv){
       free((pthread_t*)vector_at(threads, i));
     }
     vector_free(threads);
-    pthread_rwlock_destroy(&lock);
+    pthread_mutex_destroy(&lock);
     for (long i = 0; i < gridSize; i++) {
-      pthread_rwlock_destroy((pthread_rwlock_t*)vector_at(lockVector, i));
-      free((pthread_rwlock_t*)vector_at(lockVector, i));
+      pthread_mutex_destroy((pthread_rwlock_t*)vector_at(lockVector, i));
+      free((pthread_mutex_t*)vector_at(lockVector, i));
     }
     vector_free(lockVector);
 

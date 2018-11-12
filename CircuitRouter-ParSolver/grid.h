@@ -156,6 +156,23 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr);
  */
 bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lockVector);
 
+/* =============================================================================
+ * get_index
+ * =============================================================================
+ */
+long get_index(grid_t* gridPtr, long x, long y, long z);
+
+/* =============================================================================
+ * lock_point
+ * =============================================================================
+ */
+bool_t lock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i);
+
+/* =============================================================================
+ * unlock_point
+ * =============================================================================
+ */
+void unlock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i);
 
 /* =============================================================================
  * grid_print
