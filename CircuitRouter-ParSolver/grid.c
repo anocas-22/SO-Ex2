@@ -63,7 +63,7 @@
 #include <errno.h>
 #include <time.h>
 
-extern int errno
+extern int errno;
 const unsigned long CACHE_LINE_SIZE = 32UL;
 
 
