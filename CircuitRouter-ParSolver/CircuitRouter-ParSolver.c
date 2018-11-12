@@ -57,7 +57,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <errno.h>
 #include "lib/list.h"
 #include "maze.h"
 #include "router.h"
@@ -84,7 +83,7 @@ enum param_defaults {
 bool_t global_doPrint = TRUE;
 char* global_inputFile = NULL;
 long global_params[256]; /* 256 = ascii limit */
-
+extern int errno;
 
 /* =============================================================================
  * displayUsage
@@ -170,6 +169,8 @@ int main(int argc, char** argv){
      * Initialization
      */
 
+    vector_t* threads = vector_alloc(global_params[PARAM_NUMTAREFAS]);
+
     char* filename = parseArgs(argc, (char** const)argv);
     maze_t* mazePtr = maze_alloc();
     assert(mazePtr);
@@ -183,88 +184,55 @@ int main(int argc, char** argv){
     list_t* pathVectorListPtr = list_alloc(NULL);
     assert(pathVectorListPtr);
 
-    //Inicializa o lock global para a interacao com workQueuePtr e pathVectorListPtr
     pthread_mutex_t lock;
-    if (pthread_mutex_init(&lock, NULL) != 0) {
-      perror("Failure initializing mutex: ");
-      exit(EXIT_FAILURE);
+    if ((errno = pthread_mutex_init(&lock, NULL)) != 0) {
+	perror("Error in pthread_mutex_init");
+	exit(-1);
     }
 
-    //Cria um vetor de mutexes do mesmo tamanho que a grid
+    //criar vetor de mutex igual a grid
     long gridSize = mazePtr->gridPtr->width * mazePtr->gridPtr->height * mazePtr->gridPtr->depth;
     vector_t* lockVector = vector_alloc(gridSize);
-    if (lockVector == NULL) {
-      fprintf(stderr, "Failed to initialize the vector lockVector.\n");
-      exit(EXIT_FAILURE);
-    }
-
-    //Inicializa todos os mutexes de lockVector
     for (long i = 0; i < gridSize; i++) {
       pthread_mutex_t* pointLock = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
-      if (pointLock == NULL) {
-        perror("Failed malloc: ");
-        exit(EXIT_FAILURE);
+      if ((errno = pthread_mutex_init(pointLock, NULL)) != 0) {
+	perror("Error in pthread_mutex_init");
+	exit(-1);
       }
-      if (pthread_mutex_init(pointLock, NULL) != 0) {
-        perror("Failed malloc: ");
-        exit(EXIT_FAILURE);
-      }
-      if(!vector_pushBack(lockVector, (void*) pointLock)) {
-        fprintf(stderr, "Failed to add thread to vector.\n");
-        exit(EXIT_FAILURE);
-      }
+      vector_pushBack(lockVector, (void*) pointLock);
     }
 
-    //Passa o lock global e o vetor de mutexes para o router_solve
     router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, &lock, lockVector};
     TIMER_T startTime;
     TIMER_READ(startTime);
 
-    //Cria um vetor de threads com o tamanho passado na execucao
-    vector_t* threads = vector_alloc(global_params[PARAM_NUMTAREFAS]);
-    if (threads == NULL) {
-      fprintf(stderr, "Failed to initialize the vector threads.\n");
-      exit(EXIT_FAILURE);
-    }
-
-    //Inicializa todas as threads no vetor threads executando router_solve com routerArg como argumento
-    for (long i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
+    long i;
+    for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
       pthread_t* thread = (pthread_t*) malloc(sizeof(pthread_t));
-      if (thread == NULL) {
-        perror("Failed malloc: ");
-        exit(EXIT_FAILURE);
+      if ((errno = pthread_create(thread, 0, (void*) router_solve, (void *)&routerArg)) != 0) {
+	perror("Error in pthread_create");
+	exit(-1);
       }
-      if (pthread_create(thread, 0, (void*) router_solve, (void *)&routerArg) != 0) {
-        fprintf(stderr, "Failed to create thread.\n");
-        exit(EXIT_FAILURE);
-      }
-      if (!vector_pushBack(threads, (void*) thread)) {
-        fprintf(stderr, "Failed to add thread to vector.\n");
-        exit(EXIT_FAILURE);
-      }
+      vector_pushBack(threads, (void*) thread);
     }
+    //router_solve((void *)&routerArg);
 
-    //Espera que todas as threads acabem a execucao e liberta-as
-    for (long i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
-      if (pthread_join(*((pthread_t*)vector_at(threads, i)), NULL) != 0) {
-        fprintf(stderr, "Failed to join thread.\n");
-        exit(EXIT_FAILURE);
+    for (i = 0; i < global_params[PARAM_NUMTAREFAS]; i++) {
+      if ((errno = pthread_join(*((pthread_t*)vector_at(threads, i)), NULL)) != 0) {
+	perror("Error in pthread_join");
+	exit(-1);
       }
       free((pthread_t*)vector_at(threads, i));
     }
-
-    //Liberta o vetor e destroi todos os mutexes e o vetor correspondente
     vector_free(threads);
-
-    if (pthread_mutex_destroy(&lock) != 0) {
-      fprintf(stderr, "Failed to destroy mutex.\n");
-      exit(EXIT_FAILURE);
+    if ((errno = pthread_mutex_destroy(&lock)) != 0) {
+	perror("Error in pthread_mutex_destroy");
+	exit(-1);
     }
-
     for (long i = 0; i < gridSize; i++) {
-      if (pthread_mutex_destroy((pthread_mutex_t*)vector_at(lockVector, i)) != 0) {
-        fprintf(stderr, "Failed to destroy mutex.\n");
-        exit(EXIT_FAILURE);
+      if ((errno = pthread_mutex_destroy((pthread_mutex_t*)vector_at(lockVector, i))) != 0) {
+	perror("Error in pthread_mutex_destroy");
+	exit(-1);
       }
       free((pthread_mutex_t*)vector_at(lockVector, i));
     }
