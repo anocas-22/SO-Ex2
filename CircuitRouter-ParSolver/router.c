@@ -301,6 +301,7 @@ void router_solve (void* argPtr){
     vector_t* myPathVectorPtr = vector_alloc(1);
     assert(myPathVectorPtr);
 
+    //Recebe o lock global e o vetor de mutexes de routerArgPtr
     pthread_mutex_t* lockPtr = routerArgPtr->lockPtr;
     vector_t* lockVector = routerArgPtr->lockVector;
 
@@ -316,8 +317,9 @@ void router_solve (void* argPtr){
      * 'expansion' and 'traceback' phase for each source/destination pair.
      */
     while (1) {
-
         pair_t* coordinatePairPtr;
+
+        //O lock global controla a competicao para extrair tarefas de workQueuePtr
         pthread_mutex_lock(lockPtr);
         if (queue_isEmpty(workQueuePtr)) {
             coordinatePairPtr = NULL;
@@ -339,12 +341,21 @@ void router_solve (void* argPtr){
           bool_t breakSignal = FALSE;
           vector_t* pointVectorPtr = NULL;
 
+          /* Nao e necesseario bloquear a copia da grid global para a grid local
+           * pois e efetuada uma verificacao do caminho obtido no doExpansion
+           * dentro e fora dos locks finos logo nao havera problemas de concorrencia.
+           */
           grid_copy(myGridPtr, gridPtr); /* create a copy of the grid, over which the expansion and trace back phases will be executed. */
           if (doExpansion(routerPtr, myGridPtr, myExpansionQueuePtr,
                            srcPtr, dstPtr)) {
               pointVectorPtr = doTraceback(gridPtr, myGridPtr, dstPtr, bendCost);
               if (pointVectorPtr) {
-                  //verifica se as posicoes estao todas
+                  /* Verifica se as posicoes do caminho determinado estao livres.
+                   * Apesar de ser efetuada uma verificacao dentro dos locks finos
+                   * efetuamos esta anterior para evitar o custo de fazer lock
+                   * e unlock a todas as posicoes do caminho se este estiver ocupado.
+                   * Se falhar a thread tenta descobrir outro caminho.
+                   */
                   for (long i = 1; i < (vector_getSize(pointVectorPtr)-1); i++) {
                     if (*(long*)vector_at(pointVectorPtr, i) == GRID_POINT_FULL) {
                       breakSignal = TRUE;
@@ -352,11 +363,18 @@ void router_solve (void* argPtr){
                     }
                   }
                   if (breakSignal) { continue; }
+                  /* grid_addPath_Ptr tenta adicionar o caminho a grid global,
+                   * se falhar por concorrencia de locks ou pelo caminho estar
+                   * ocupado a tarefa tenta descobrir outro caminho.
+                   */
                   if (!grid_addPath_Ptr(gridPtr, pointVectorPtr, lockVector)) {
                     continue;
                   }
                   success = TRUE;
               }
+          /* Se a tarefa nao encontrar um caminho livre passa para o proximo par
+           * de coordenadas.
+           */
           } else { break; }
 
           if (success) {

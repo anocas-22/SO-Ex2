@@ -60,7 +60,7 @@
 #include "lib/types.h"
 #include "lib/vector.h"
 #include <pthread.h>
-
+#include <time.h>
 
 const unsigned long CACHE_LINE_SIZE = 32UL;
 
@@ -214,37 +214,87 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr){
 /* =============================================================================
  * grid_addPath_Ptr
  * =============================================================================
+ * Percorre o caminho em pointVectorPtr e tenta fazer lock das posicoes e
+ * verifica se estas estao preenchidas.
+ * Se nao conseguir fazer lock vai tentar outra vez apos esperar algum tempo
+ * aleatorio de forma a nao encontrar o mesmo obstaculo e mesmo assim apenas vai
+ * tentar 3 vezes para impedir que, caso seja impossivel resolver o impasse,
+ * se gaste demasiado tempo
+ * Caso nao consiga fazer lock das posicoes ou se uma delas estiver preenchida
+ * vai fazer unlock de todas as posicoes e devolver FALSE
+ * Caso consiga fazer todos os locks sem problemas vai escrever o caminho na
+ * grid global, fazer unlock das posicoes e devolver TRUE
  */
 bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lockVector){
-    long i;
+    long i, j, tries = 0;
     long n = vector_getSize(pointVectorPtr);
     bool_t returnVal = TRUE;
 
-    //fazer lock das posicoes todas
     for (i = 1; i < (n-1); i++) {
-      long x, y, z;
       long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
-      grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
-      pthread_rwlock_wrlock((pthread_rwlock_t*) vector_at(lockVector, ((z * gridPtr->height + y) * gridPtr->width + x)));
-      //verificar se o caminho esta livre e unlocked (se nao devolver false)
-      if (*gridPointPtr == GRID_POINT_FULL)
-        returnVal = FALSE;
+      if(lock_point(gridPtr, gridPointPtr, lockVector, i)) {
+        if (*gridPointPtr == GRID_POINT_FULL) {
+          returnVal = FALSE;
+          n = i + 1;
+          break;
+        }
+      } else {
+        tries++;
+        if (tries <= 3) {
+          nanosleep((const struct timespec[]){{0, random() % 100}}, NULL);
+          for (j = 0; j < i; j++) {
+            long* gridPointPtr = (long*)vector_at(pointVectorPtr, j);
+            unlock_point(gridPtr, gridPointPtr, lockVector, j);
+          }
+          i = 0;
+        } else {
+          returnVal = FALSE;
+          n = i + 1;
+          break;
+        }
+      }
     }
 
     for (i = 1; i < (n-1); i++) {
-      long x, y, z;
       long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
-      grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
       if (returnVal) {
         *gridPointPtr = GRID_POINT_FULL;
       }
-      //fazer unclok das posicoes
-      pthread_rwlock_unlock((pthread_rwlock_t*) vector_at(lockVector, ((z * gridPtr->height + y) * gridPtr->width + x)));
+      unlock_point(gridPtr, gridPointPtr, lockVector, i);
     }
 
     return returnVal;
 }
 
+/* =============================================================================
+ * get_index
+ * =============================================================================
+ */
+long get_index(grid_t* gridPtr, long x, long y, long z) {
+  return (z * gridPtr->height + y) * gridPtr->width + x;
+}
+
+
+/* =============================================================================
+ * lock_point
+ * =============================================================================
+ */
+bool_t lock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i) {
+  long x, y, z;
+  grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
+  return (pthread_mutex_trylock((pthread_mutex_t*) vector_at(lockVector, get_index(gridPtr, x,y,z))) == 0);
+}
+
+
+ /* =============================================================================
+  * unlock_point
+  * =============================================================================
+  */
+  void unlock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i) {
+    long x, y, z;
+    grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
+    pthread_mutex_unlock((pthread_mutex_t*) vector_at(lockVector, get_index(gridPtr, x,y,z)));
+  }
 
 /* =============================================================================
  * grid_print
