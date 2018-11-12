@@ -60,8 +60,10 @@
 #include "lib/types.h"
 #include "lib/vector.h"
 #include <pthread.h>
+#include <errno.h>
 #include <time.h>
 
+extern int errno
 const unsigned long CACHE_LINE_SIZE = 32UL;
 
 
@@ -236,7 +238,7 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lo
         tries++;
         if (tries <= 3) {
           if (nanosleep((const struct timespec[]){{0, random() % 100}}, NULL) != 0) {
-            perror("Failure calling nanosleep: ");
+            perror("Failure calling nanosleep");
             exit(EXIT_FAILURE);
           }
           for (j = 0; j < i; j++) {
@@ -298,8 +300,8 @@ bool_t lock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, lon
   void unlock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i) {
     long x, y, z;
     grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
-    if (pthread_mutex_unlock((pthread_mutex_t*) vector_at(lockVector, get_index(gridPtr, x,y,z))) != 0) {
-      fprintf(stderr, "Failed to unlock mutex.\n");
+    if ((errno = pthread_mutex_unlock((pthread_mutex_t*) vector_at(lockVector, get_index(gridPtr, x,y,z)))) != 0) {
+      perror("Failed to unlock mutex");
       exit(EXIT_FAILURE);
     }
   }
