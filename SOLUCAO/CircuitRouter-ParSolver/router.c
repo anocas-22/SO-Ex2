@@ -301,7 +301,7 @@ void router_solve (void* argPtr){
     vector_t* myPathVectorPtr = vector_alloc(1);
     assert(myPathVectorPtr);
 
-    //Recebe o lock global e o vetor de mutexes de routerArgPtr
+    /*Recebe o lock global e o vetor de mutexes de routerArgPtr*/
     pthread_mutex_t* lockPtr = routerArgPtr->lockPtr;
     vector_t* lockVector = routerArgPtr->lockVector;
 
@@ -319,14 +319,20 @@ void router_solve (void* argPtr){
     while (1) {
         pair_t* coordinatePairPtr;
 
-        //O lock global controla a competicao para extrair tarefas de workQueuePtr
-        pthread_mutex_lock(lockPtr);
+        /*O lock global controla a competicao para extrair tarefas de workQueuePtr*/
+        if (pthread_mutex_lock(lockPtr) != 0) {
+          fprintf(stderr, "Failed to lock mutex.\n");
+          exit(EXIT_FAILURE);
+        }
         if (queue_isEmpty(workQueuePtr)) {
             coordinatePairPtr = NULL;
         } else {
             coordinatePairPtr = (pair_t*)queue_pop(workQueuePtr);
         }
-        pthread_mutex_unlock(lockPtr);
+        if (pthread_mutex_unlock(lockPtr) != 0) {
+          fprintf(stderr, "Failed to unlock mutex.\n");
+          exit(EXIT_FAILURE);
+        }
         if (coordinatePairPtr == NULL) {
             break;
         }
@@ -377,6 +383,7 @@ void router_solve (void* argPtr){
            */
           } else { break; }
 
+          /*Se tudo correr bem adiciona o caminho ao vetor local de caminhos*/
           if (success) {
               bool_t status = vector_pushBack(myPathVectorPtr,(void*)pointVectorPtr);
               assert(status);
@@ -387,11 +394,18 @@ void router_solve (void* argPtr){
 
     /*
      * Add my paths to global list
+     * O lock controla a competicao entre threads
      */
     list_t* pathVectorListPtr = routerArgPtr->pathVectorListPtr;
-    pthread_mutex_lock(lockPtr);
+    if (pthread_mutex_lock(lockPtr) != 0) {
+      fprintf(stderr, "Failed to lock mutex.\n");
+      exit(EXIT_FAILURE);
+    }
     list_insert(pathVectorListPtr, (void*)myPathVectorPtr);
-    pthread_mutex_unlock(lockPtr);
+    if (pthread_mutex_unlock(lockPtr) != 0) {
+      fprintf(stderr, "Failed to unlock mutex.\n");
+      exit(EXIT_FAILURE);
+    }
 
     grid_free(myGridPtr);
     queue_free(myExpansionQueuePtr);

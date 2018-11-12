@@ -11,6 +11,8 @@ SOLUCAO
 |   | grid.c
 |   | grid.h
 |	  | Makefile //Makefile do CircuitRouter-ParSolver
+|   | maze.c
+|   | maze.h
 |   | router.c
 |   | router.h
 |---CircuitRouter-SeqSolver //codigo do Ex1 (usado para calcular o speed up)
@@ -20,6 +22,8 @@ SOLUCAO
 |   | grid.c
 |   | grid.h
 |	  | Makefile //Makefile do CircuitRouter-SeqSolver
+|   | maze.c
+|   | maze.h
 |   | router.c
 |   | router.h
 |---lib //biblioteca auxiliar ao programa
@@ -65,12 +69,12 @@ Para executar o programa usar:
 Para executar o programa e medir o speedup usar:
 ./doTest.sh <numero de threads a usar> <ficheiro de entrada>
 
-Caracteristicas do processador usado para os testes:
+#CARACTERISTICAS DO PROCESSADOR USADO PARA OS TESTES#
 Foi usado um computador com hyper-threading
 Numero de cores: 4
 Numero de threads: 8
 Clock Rate: 4 GHz
 Modelo: AMD FX(tm)-8350 Eight-Core Processor
 
-Sistema Operativo usado para os testes:
+#CARACTERISTICAS DO SISTEMA OPERATIVO USADO PARA OS TESTES#
 Linux DESKTOP-GBVNN15 4.4.0-17134-Microsoft #345-Microsoft Wed Sep 19 17:47:00 PST 2018 x86_64 x86_64 x86_64 GNU/Linux

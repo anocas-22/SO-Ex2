@@ -153,23 +153,36 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr);
 /* =============================================================================
  * grid_addPath_Ptr
  * =============================================================================
+ * Percorre o caminho em pointVectorPtr, tenta fazer lock das posicoes e
+ * verifica se estas estao preenchidas.
+ * Se nao conseguir fazer lock vai tentar outra vez apos esperar algum tempo
+ * aleatorio de forma a nao encontrar o mesmo obstaculo e mesmo assim apenas vai
+ * tentar 3 vezes para impedir que, caso seja impossivel resolver o impasse,
+ * se gaste demasiado tempo
+ * Caso nao consiga fazer lock das posicoes ou se uma delas estiver preenchida
+ * vai fazer unlock de todas as posicoes e devolver FALSE
+ * Caso consiga fazer todos os locks sem problemas vai escrever o caminho na
+ * grid global, fazer unlock das posicoes e devolver TRUE
  */
 bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lockVector);
 
 /* =============================================================================
  * get_index
+ * Descobre a posicao de um ponto na grid apartir das suas coordenadas
  * =============================================================================
  */
 long get_index(grid_t* gridPtr, long x, long y, long z);
 
 /* =============================================================================
  * lock_point
- * =============================================================================
+ * Descobre a posicao de um ponto e bloqueia o mutex equivalente
+* =============================================================================
  */
 bool_t lock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i);
 
 /* =============================================================================
  * unlock_point
+ * Descobre a posicao de um ponto e desbloqueia o mutex equivalente
  * =============================================================================
  */
 void unlock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i);

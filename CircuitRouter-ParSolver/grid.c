@@ -214,16 +214,6 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr){
 /* =============================================================================
  * grid_addPath_Ptr
  * =============================================================================
- * Percorre o caminho em pointVectorPtr e tenta fazer lock das posicoes e
- * verifica se estas estao preenchidas.
- * Se nao conseguir fazer lock vai tentar outra vez apos esperar algum tempo
- * aleatorio de forma a nao encontrar o mesmo obstaculo e mesmo assim apenas vai
- * tentar 3 vezes para impedir que, caso seja impossivel resolver o impasse,
- * se gaste demasiado tempo
- * Caso nao consiga fazer lock das posicoes ou se uma delas estiver preenchida
- * vai fazer unlock de todas as posicoes e devolver FALSE
- * Caso consiga fazer todos os locks sem problemas vai escrever o caminho na
- * grid global, fazer unlock das posicoes e devolver TRUE
  */
 bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lockVector){
     long i, j, tries = 0;
@@ -232,6 +222,10 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lo
 
     for (i = 1; i < (n-1); i++) {
       long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
+      if (gridPointPtr == NULL) {
+        fprintf(stderr, "Failed to get point from pointVectorPtr.\n");
+        exit(EXIT_FAILURE);
+      }
       if(lock_point(gridPtr, gridPointPtr, lockVector, i)) {
         if (*gridPointPtr == GRID_POINT_FULL) {
           returnVal = FALSE;
@@ -241,9 +235,16 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lo
       } else {
         tries++;
         if (tries <= 3) {
-          nanosleep((const struct timespec[]){{0, random() % 100}}, NULL);
+          if (nanosleep((const struct timespec[]){{0, random() % 100}}, NULL) != 0) {
+            perror("Failure calling nanosleep: ");
+            exit(EXIT_FAILURE);
+          }
           for (j = 0; j < i; j++) {
             long* gridPointPtr = (long*)vector_at(pointVectorPtr, j);
+            if (gridPointPtr == NULL) {
+              fprintf(stderr, "Failed to get point from pointVectorPtr.\n");
+              exit(EXIT_FAILURE);
+            }
             unlock_point(gridPtr, gridPointPtr, lockVector, j);
           }
           i = 0;
@@ -257,6 +258,10 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lo
 
     for (i = 1; i < (n-1); i++) {
       long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
+      if (gridPointPtr == NULL) {
+        fprintf(stderr, "Failed to get point from pointVectorPtr.\n");
+        exit(EXIT_FAILURE);
+      }
       if (returnVal) {
         *gridPointPtr = GRID_POINT_FULL;
       }
@@ -293,7 +298,10 @@ bool_t lock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, lon
   void unlock_point(grid_t* gridPtr, long* gridPointPtr, vector_t* lockVector, long i) {
     long x, y, z;
     grid_getPointIndices(gridPtr, gridPointPtr, &x, &y, &z);
-    pthread_mutex_unlock((pthread_mutex_t*) vector_at(lockVector, get_index(gridPtr, x,y,z)));
+    if (pthread_mutex_unlock((pthread_mutex_t*) vector_at(lockVector, get_index(gridPtr, x,y,z))) != 0) {
+      fprintf(stderr, "Failed to unlock mutex.\n");
+      exit(EXIT_FAILURE);
+    }
   }
 
 /* =============================================================================
