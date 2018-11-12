@@ -215,7 +215,7 @@ int main(int argc, char** argv){
     vector_free(threads);
     pthread_mutex_destroy(&lock);
     for (long i = 0; i < gridSize; i++) {
-      pthread_mutex_destroy((pthread_rwlock_t*)vector_at(lockVector, i));
+      pthread_mutex_destroy((pthread_mutex_t*)vector_at(lockVector, i));
       free((pthread_mutex_t*)vector_at(lockVector, i));
     }
     vector_free(lockVector);

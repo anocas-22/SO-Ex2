@@ -1,7 +1,4 @@
-Backup_08_11_2018.zip
 *.o
-/CircuitRouter-ParSolver/inputs/
+/inputs/*.res*
 /CircuitRouter-ParSolver/CircuitRouter-ParSolver
-sol.zip
-/CircuitRouter-ParSolver.copy/
 /CircuitRouter-SeqSolver/

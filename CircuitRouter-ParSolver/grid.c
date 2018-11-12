@@ -60,7 +60,7 @@
 #include "lib/types.h"
 #include "lib/vector.h"
 #include <pthread.h>
-
+#include <time.h>
 
 const unsigned long CACHE_LINE_SIZE = 32UL;
 
@@ -218,8 +218,12 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr){
  * verifica se estas estao preenchidas.
  * Se nao conseguir fazer lock vai tentar outra vez apos esperar algum tempo
  * aleatorio de forma a nao encontrar o mesmo obstaculo e mesmo assim apenas vai
- * tentar 10 vezes
- *
+ * tentar 3 vezes para impedir que, caso seja impossivel resolver o impasse,
+ * se gaste demasiado tempo
+ * Caso nao consiga fazer lock das posicoes ou se uma delas estiver preenchida
+ * vai fazer unlock de todas as posicoes e devolver FALSE
+ * Caso consiga fazer todos os locks sem problemas vai escrever o caminho na
+ * grid global, fazer unlock das posicoes e devolver TRUE
  */
 bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lockVector){
     long i, j, tries = 0;
@@ -236,8 +240,8 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, vector_t* lo
         }
       } else {
         tries++;
-        if (tries < 10) {
-          nanosleep(random());
+        if (tries <= 3) {
+          nanosleep((const struct timespec[]){{0, random() % 100}}, NULL);
           for (j = 0; j < i; j++) {
             long* gridPointPtr = (long*)vector_at(pointVectorPtr, j);
             unlock_point(gridPtr, gridPointPtr, lockVector, j);
